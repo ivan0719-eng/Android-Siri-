@@ -8,15 +8,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
-import android.view.View
 import android.view.WindowInsets
 import android.widget.*
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var toggle: Switch
-    private lateinit var key: EditText
     private val handler = Handler(Looper.getMainLooper())
     private var refreshing = false
     private val refresh = object : Runnable {
@@ -25,13 +22,14 @@ class MainActivity : Activity() {
             refreshing = true
             toggle.isChecked = AssistantService.running
             refreshing = false
-            key.isEnabled = !AssistantService.running
             handler.postDelayed(this, 500)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Remove any key left by version 0.1 when updating in place.
+        getPreferences(MODE_PRIVATE).edit().remove("key").apply()
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             val padding = (24 * resources.displayMetrics.density).toInt()
@@ -43,17 +41,8 @@ class MainActivity : Activity() {
         }
         label("Pocket Assistant", 30f)
         label("Say Jarvis. Wait for the beep. Then ask a question.")
-        label("Stage 1 · Time, date, greetings and spoken replies", 15f)
-        key = EditText(this).apply {
-            hint = "Picovoice access key"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
-            isSaveEnabled = false
-            setSingleLine()
-            setText(getPreferences(MODE_PRIVATE).getString("key", ""))
-        }
-        layout.addView(key)
-        label("Get your own key from console.picovoice.ai. It stays in this app's private storage; backups are disabled. Wake detection runs locally. Command recognition and voices may use your speech provider's network services.", 14f)
+        label("Version 0.2 · Time, date, greetings and spoken replies", 15f)
+        label("No account or API key needed. Wake detection runs on your phone. Command recognition and voices may use your speech provider's network services.", 14f)
         toggle = Switch(this).apply { text = "Enable hands-free listening" }
         layout.addView(toggle)
         status = label(AssistantService.status)
@@ -73,11 +62,6 @@ class MainActivity : Activity() {
     }
 
     private fun requestStart() {
-        if (key.text.toString().trim().isEmpty()) {
-            key.error = "Enter your Picovoice access key first"
-            toggle.isChecked = false
-            return
-        }
         val missing = mutableListOf<String>()
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             missing.add(Manifest.permission.RECORD_AUDIO)
@@ -97,10 +81,8 @@ class MainActivity : Activity() {
     }
 
     private fun startListening() {
-        val accessKey = key.text.toString().trim()
-        getPreferences(MODE_PRIVATE).edit().putString("key", accessKey).apply()
         try {
-            startForegroundService(Intent(this, AssistantService::class.java).putExtra("key", accessKey))
+            startForegroundService(Intent(this, AssistantService::class.java))
         } catch (_: RuntimeException) {
             AssistantService.status = "Could not start listening. Keep the app open and check microphone permission."
             toggle.isChecked = false

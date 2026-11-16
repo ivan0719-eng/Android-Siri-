@@ -5,25 +5,28 @@ A Kotlin Android prototype for the Samsung S25 Ultra. Say **Jarvis**, wait for t
 ## Run on your phone
 
 1. Open this folder in Android Studio and let Gradle sync. Build dependencies: Gradle 9.4.1, Android Gradle Plugin 9.2.1 (built-in Kotlin), Android SDK 35. Use Android Studio's bundled JDK.
-2. Get your own access key from [Picovoice Console](https://console.picovoice.ai/). Review its current terms and account limits. Enter the key **in the phone app**, never in source control or chat. Key validation can require internet access even though wake detection runs locally.
+2. Version **0.2** needs **no account or API key**. The wake model is bundled in the APK. It replaces version 0.1's Picovoice dependency and clears any previously saved key.
 3. Enable Developer options on the phone by tapping **Settings → About phone → Software information → Build number** seven times. Enable USB debugging, connect a data cable, and accept the computer's debugging prompt.
 4. Select the phone in Android Studio and press Run, or install the APK with `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
-5. Open Pocket Assistant, enter the access key and enable hands-free listening. Grant microphone and notification permissions.
+5. Open Pocket Assistant and enable hands-free listening. Grant microphone and notification permissions.
 6. Say **Jarvis**, pause for the beep, then say **What time is it?**, **What day is it?**, **Hello**, or **What can you do?**
 7. Stop listening in the app or its notification. Manually enable it again after a reboot, force stop or system termination.
 
-Install an English speech-recognition language and TTS voice if needed. On-device command recognition is preferred when available; otherwise Android's speech provider may process commands online. TTS can also use network voices. No audio or transcript history is saved to disk; the last exchange stays in memory. The key is stored in app-private preferences, with backups disabled.
+Alternatively, copy the APK to the phone's Download folder using USB file transfer, then open it in My Files and install/update it. USB debugging is not required for this method. Version 0.2 can be installed over 0.1 using the same debug signing key. Confirm the screen says **Version 0.2** and has no key field.
+
+Install an English speech-recognition language and TTS voice if needed. On-device command recognition is preferred when available; otherwise Android's speech provider may process commands online. TTS can also use network voices. No audio or transcript history is saved to disk; the last exchange stays in memory. The app itself has no internet permission, and no credentials are needed or stored in version 0.2.
 
 ## Architecture and limitations
 
-`Foreground microphone service → Porcupine JARVIS detector → pause detector → Android SpeechRecognizer → local command response → Android TTS → resume detector`
+`Foreground microphone service → sherpa-onnx Jarvis detector → pause detector → Android SpeechRecognizer → local command response → Android TTS → resume detector`
 
 - Only wake detection runs between requests. The command recognizer is destroyed after each request; detection pauses during replies to avoid self-triggering.
 - A notification is shown while listening. A partial CPU wake lock supports screen-off listening, with a real battery cost that must be measured on the phone.
 - Engine initialization uses a worker thread. Speech APIs and state changes use the main thread. Recognition and reply timeouts prevent indefinite sessions.
 - No rolling buffer yet: wait for the beep before speaking. Seamless wake phrase plus command requires a shared audio pipeline.
 - No auto-start at boot, default-assistant role, phone actions, cloud AI, voice interruption or speaker identification yet. Anyone can trigger the wake word.
-- A custom phrase such as “Hey Nova” needs a suitable Android keyword model. The initial built-in word is **Jarvis**.
+- The bundled English keyword model uses a tokenized **Jarvis** keyword file. Custom phrases require generating matching tokens and retesting detection accuracy.
+- This APK includes ARM64 native libraries, matching the S25 Ultra. It does not support x86 emulators.
 - Manufacturer-level battery efficiency and Samsung background survival are not guaranteed.
 
 ## Build
@@ -36,8 +39,8 @@ Unit tests check time/date responses and that unsupported requests do not falsel
 
 ## Physical-phone acceptance checklist
 
-- Valid key: enable, wake, wait for beep, ask time and hear answer; repeat ten times.
-- Empty/invalid key: useful error and no microphone service left after failure.
+- Enable without any signup/key: wake, wait for beep, ask time and hear answer; repeat ten times.
+- Update from 0.1: no key field and no leftover saved key.
 - Denied microphone permission: no recording; retry after granting in settings.
 - Denied notifications: app stop control still works.
 - Silence after wake: return to wake mode after an error or the 15-second timeout.
@@ -57,4 +60,4 @@ Unit tests check time/date responses and that unsupported requests do not falsel
 3. Add conversational AI and its credential/backend design.
 4. Explore the default-assistant role, custom wake phrase and shared audio buffering.
 
-References: [Porcupine Android API](https://picovoice.ai/docs/api/porcupine-android/), [Android microphone services](https://developer.android.com/develop/background-work/services/fgs/service-types), [Android speech recognition](https://developer.android.com/reference/android/speech/SpeechRecognizer).
+References: [sherpa-onnx keyword spotting](https://k2-fsa.github.io/sherpa/onnx/kws/index.html), [Android microphone services](https://developer.android.com/develop/background-work/services/fgs/service-types), [Android speech recognition](https://developer.android.com/reference/android/speech/SpeechRecognizer). See `third_party/README.md` for bundled dependency provenance.

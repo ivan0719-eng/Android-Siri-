@@ -10,8 +10,6 @@ import android.os.*
 import android.speech.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import ai.picovoice.porcupine.Porcupine
-import ai.picovoice.porcupine.PorcupineManager
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -24,7 +22,7 @@ class AssistantService : Service() {
     private var phase = Phase.STARTING
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private var wake: PorcupineManager? = null
+    private var wake: WakeWordDetector? = null
     private var recognizer: SpeechRecognizer? = null
     private var voice: TextToSpeech? = null
     private var tone: ToneGenerator? = null
@@ -32,7 +30,7 @@ class AssistantService : Service() {
     private var generation = 0
     private var lastExchange = ""
     private val startupTimeout = Runnable {
-        if (phase == Phase.STARTING) fail("Voice engines took too long to start. Check connectivity and speech settings, then retry.")
+        if (phase == Phase.STARTING) fail("Voice engines took too long to start. Check speech settings, then retry.")
     }
     private val timeout = Runnable {
         when (phase) {
@@ -55,8 +53,6 @@ class AssistantService : Service() {
         startForeground(1, notification("Starting…"), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         update("Starting voice engines…")
         main.postDelayed(startupTimeout, 45000)
-        val accessKey = intent?.getStringExtra("key").orEmpty()
-        if (accessKey.isBlank()) { fail("Access key missing. Open the app and enter your key."); return START_NOT_STICKY }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             fail("No speech recognition service is installed. Enable a speech provider and try again.")
             return START_NOT_STICKY
@@ -78,24 +74,25 @@ class AssistantService : Service() {
                 @Deprecated("Required legacy callback")
                 override fun onError(id: String?) { main.post { if (phase == Phase.SPEAKING) resumeWake() } }
             })
-            initializeWake(accessKey)
+            initializeWake()
         } }
         return START_NOT_STICKY
     }
 
-    private fun initializeWake(accessKey: String) {
+    private fun initializeWake() {
         worker.execute {
             try {
-                val engine = PorcupineManager.Builder().setAccessKey(accessKey)
-                    .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
-                    .setErrorCallback { main.post { fail("Wake detector error. Stop listening, check microphone access, and try again.") } }
-                    .build(applicationContext) { main.post { if (phase == Phase.WAKE) listenForCommand() } }
+                val engine = WakeWordDetector(assets,
+                    onWake = { main.post { if (phase == Phase.WAKE) listenForCommand() } },
+                    onError = { main.post { fail("Wake detector error. Stop listening, check microphone access, and try again.") } })
                 main.post {
                     if (phase == Phase.STOPPED) engine.delete()
                     else { wake = engine; resumeWake() }
                 }
             } catch (_: Exception) {
-                main.post { fail("Wake detector could not start. Check your Picovoice key, account limits and internet connection, then retry.") }
+                main.post { fail("Wake model could not load. Reinstall the complete version 0.2 APK and retry.") }
+            } catch (_: LinkageError) {
+                main.post { fail("Wake engine is not compatible with this device. This APK requires a 64-bit ARM Android phone.") }
             }
         }
     }

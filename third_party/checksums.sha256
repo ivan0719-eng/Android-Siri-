@@ -1,0 +1,6 @@
+a8d09d1d32f3eb8520482c6d3d43fae674681c5b050385967c70a3c2c9bf0ee7  app/libs/sherpa-onnx-2.0.1.aar
+e40ff43297abe815e8898494c17e71bba2152d9d40fa3eb803f75d0f7533329a  app/src/main/assets/wake/decoder.onnx
+1e721676515bcd42a186979733981213c66c80db680e1cc582dfedf3be76e678  app/src/main/assets/wake/encoder.onnx
+eae9da0c7e1e6c6a3f4cc42d167899c388f6c6701b94cb96320e4f55df79624c  app/src/main/assets/wake/joiner.onnx
+04ba1e426a413b424ae38d0ea99e5b8406239d4d08d31c7f9a848d48b8654984  app/src/main/assets/wake/keywords.txt
+fd2ded4050a55d2b1578870ba8697d02371980217806b7558bd0a5cc60f3ba53  app/src/main/assets/wake/tokens.txt

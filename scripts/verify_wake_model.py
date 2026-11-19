@@ -20,8 +20,8 @@ kws = sherpa_onnx.KeywordSpotter(
     keywords_file=str(assets / "keywords.txt"),
     num_threads=1,
     keywords_score=1.5,
-    keywords_threshold=0.25,
-    num_trailing_blanks=2,
+    keywords_threshold=float(sys.argv[3]) if len(sys.argv) > 3 else 0.18,
+    num_trailing_blanks=int(sys.argv[4]) if len(sys.argv) > 4 else 1,
 )
 
 

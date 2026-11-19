@@ -12,6 +12,11 @@ class CommandsTest {
     @Test fun dateUsesSuppliedTime() {
         assertEquals("Today is Monday, November 16.", Commands.reply("What day is it?", now))
     }
+    @Test fun naturalDateAndTimeVariants() {
+        assertEquals("Today is Monday, November 16.", Commands.reply("What's today's date?", now))
+        assertEquals("Today is Monday, November 16.", Commands.reply("What is the day?", now))
+        assertEquals("It's 11:05 PM.", Commands.reply("What's the time?", now))
+    }
     @Test fun unsupportedActionsNeverClaimSuccess() {
         assertTrue(Commands.reply("set an alarm for five", now).startsWith("I heard:"))
         assertTrue(Commands.reply("what is the time in London", now).startsWith("I heard:"))

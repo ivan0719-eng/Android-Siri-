@@ -12,15 +12,22 @@ import android.view.WindowInsets
 import android.widget.*
 
 class MainActivity : Activity() {
+    companion object { @Volatile var visible = false }
     private lateinit var status: TextView
     private lateinit var toggle: Switch
+    private lateinit var sensitivity: Switch
+    private lateinit var timerButton: Button
+    private lateinit var timerStatus: TextView
     private val handler = Handler(Looper.getMainLooper())
     private var refreshing = false
     private val refresh = object : Runnable {
         override fun run() {
-            status.text = AssistantService.status
+            status.text = AssistantService.status + if (AssistantService.diagnostics.isBlank()) "" else "\n\nDiagnostics:\n${AssistantService.diagnostics}"
+            timerButton.isEnabled = TimerRequests.pending(this@MainActivity) != null
+            timerStatus.text = TimerRequests.status(this@MainActivity)
             refreshing = true
             toggle.isChecked = AssistantService.running
+            sensitivity.isEnabled = !AssistantService.running
             refreshing = false
             handler.postDelayed(this, 500)
         }
@@ -41,11 +48,37 @@ class MainActivity : Activity() {
         }
         label("Pocket Assistant", 30f)
         label("Say Jarvis. Wait for the beep. Then ask a question.")
-        label("Version 0.2 · Time, date, greetings and spoken replies", 15f)
+        label("Version 0.5 · Time, date and timers", 15f)
         label("No account or API key needed. Wake detection runs on your phone. Command recognition and voices may use your speech provider's network services.", 14f)
+        sensitivity = Switch(this).apply {
+            text = "More sensitive Jarvis detection"
+            isChecked = getSharedPreferences("assistant", MODE_PRIVATE).getBoolean("sensitive", true)
+            setOnCheckedChangeListener { _, enabled ->
+                getSharedPreferences("assistant", MODE_PRIVATE).edit().putBoolean("sensitive", enabled).apply()
+            }
+        }
+        layout.addView(sensitivity)
+        label("Turn listening off to change sensitivity. If Jarvis wakes accidentally, disable the setting above. After a retry prompt, wait for the beep and repeat your command—no need to say Jarvis again.", 14f)
         toggle = Switch(this).apply { text = "Enable hands-free listening" }
         layout.addView(toggle)
+        layout.addView(Button(this).apply {
+            text = "Test command recognition"
+            setOnClickListener {
+                if (AssistantService.running) startService(Intent(this@MainActivity, AssistantService::class.java).setAction("TEST_COMMAND"))
+                else Toast.makeText(this@MainActivity, "Enable listening and wait for Listening for Jarvis first.", Toast.LENGTH_LONG).show()
+            }
+        })
+        label("For testing, keep this screen open and turn up media volume. The button above skips Jarvis and checks command recognition directly. Wait for Speak now before talking.", 14f)
         status = label(AssistantService.status)
+        timerStatus = label("", 16f)
+        timerButton = Button(this).apply {
+            text = "Start timer in Clock"
+            setOnClickListener {
+                TimerRequests.pending(this@MainActivity)?.let { startActivity(TimerRequests.launchIntent(this@MainActivity, it)) }
+            }
+        }
+        layout.addView(timerButton)
+        label("Try: “Set a timer for five minutes” or “Set a timer for one minute and thirty seconds”. When this app is in the background, tap the timer notification to send the request to Clock. Check Clock to confirm it is running.", 16f)
         label("Try: “What time is it?”, “What day is it?”, “Hello”.\n\nTurn listening off here or use Stop in the notification. After restarting the phone, open this app to enable listening again.", 16f)
         val scroll = ScrollView(this).apply { addView(layout) }
         scroll.setOnApplyWindowInsetsListener { view, insets ->
@@ -89,6 +122,6 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onResume() { super.onResume(); handler.post(refresh) }
-    override fun onPause() { handler.removeCallbacks(refresh); super.onPause() }
+    override fun onResume() { super.onResume(); visible = true; handler.post(refresh) }
+    override fun onPause() { visible = false; handler.removeCallbacks(refresh); super.onPause() }
 }

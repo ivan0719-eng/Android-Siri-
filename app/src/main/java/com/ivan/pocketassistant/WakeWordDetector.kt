@@ -14,6 +14,7 @@ import kotlin.concurrent.thread
 /** Account-free keyword spotting. One worker owns each stream and microphone capture. */
 class WakeWordDetector(
     assets: AssetManager,
+    moreSensitive: Boolean,
     private val onWake: () -> Unit,
     private val onError: () -> Unit,
 ) {
@@ -30,6 +31,8 @@ class WakeWordDetector(
             provider = "cpu",
         ),
         keywordsFile = "wake/keywords.txt",
+        keywordsThreshold = if (moreSensitive) 0.18f else 0.25f,
+        numTrailingBlanks = if (moreSensitive) 1 else 2,
     ))
     @Volatile private var active = false
     private var recorder: AudioRecord? = null

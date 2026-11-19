@@ -14,7 +14,7 @@ object Commands {
             "what is the date", "whats the date", "what date is it", "what day is it", "what is the day", "what is todays date", "whats todays date", "what day is it today" ->
                 "Today is ${now.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH))}."
             "hello", "hi", "hello jarvis" -> "Hello! I'm listening."
-            "help", "what can you do" -> "Ask the time or date, say hello, or say set a timer for five minutes."
+            "help", "what can you do" -> "Ask the time or date, set or cancel a timer request, open an app, or turn the torch on or off. Running timers must be stopped in Clock."
             else -> "I heard: $input. Try asking the time or date, or say set a timer for five minutes."
         }
     }

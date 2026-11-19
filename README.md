@@ -2,6 +2,17 @@
 
 A Kotlin Android prototype for the Samsung S25 Ultra. Say **Jarvis**, wait for the beep, then ask the time/date or say hello. This is a voice-loop prototype, not yet conversational AI or a replacement system assistant.
 
+## Version 0.6: apps, torch and timer cancellation
+
+- Say **Open Spotify**, **Open Instagram**, or **Open [app name]**. Matching uses exact launcher labels, with Spotify/Instagram package aliases and `insta` for Instagram. Unknown/ambiguous names are reported rather than guessed. Compound app requests are not split into multiple actions. No QUERY_ALL_PACKAGES permission or upload of the installed-app list is used.
+- With Pocket Assistant visible and unlocked, the requested app opens. Otherwise, tap the action notification or **Open requested app** in Pocket Assistant. One durable pending navigation request is kept; a newer one replaces the older one. Navigation and timer-creation requests are separate.
+- Say **Open torch**, **Turn on the flashlight**, **Turn off the torch**, or **Close torch**. First tap **Enable torch permission** and grant camera access. Camera permission is used for the rear flash through `CameraManager.setTorchMode`; no camera recording or photos are taken. Other commands work without this permission. Camera-use conflicts and permission errors are reported. The torch may be turned off by Android if another app takes the camera or the process dies.
+- **Cancel the timer** / **Stop my timer** cancels an unsent timer request and invalidates its notification. If no pending request exists, it opens Clock's timer screen (or offers a notification while backgrounded), where you must stop the running timer manually. `ACTION_SET_TIMER` provides no timer identifier; `ACTION_DISMISS_TIMER` without one dismisses expired timers, not a specific running countdown. This version deliberately does not send that misleading broad action. An already running Clock timer is never reported as cancelled by the assistant.
+
+Install `app/build/outputs/apk/debug/pocket-assistant-0.6.apk` over the current version. Test installed/missing apps in foreground and background, pending timer cancellation followed by an old notification tap, running timer cancellation via Clock, and torch on/off with permission granted/denied and while Camera is open. Android/device behavior needs physical-phone validation.
+
+API references: [AlarmClock](https://developer.android.com/reference/android/provider/AlarmClock), [CameraManager](https://developer.android.com/reference/android/hardware/camera2/CameraManager).
+
 ## Version 0.5: timers in Clock
 
 Say **Set a timer for five minutes**, **Start a timer for one minute and thirty seconds**, or **Set a 5-minute timer**. Whole-number seconds/minutes/hours are supported, including mixed units and English number words up to ninety-nine. Durations must be between one second and 24 hours. Missing units, negative/fractional values, unsupported words and trailing instructions are rejected instead of guessed.
@@ -40,7 +51,7 @@ The ready beep is played only after Android reports readiness. No beep is not pr
 6. Say **Jarvis**, pause for the beep, then say **What time is it?**, **What day is it?**, **Hello**, or **What can you do?**
 7. Stop listening in the app or its notification. Manually enable it again after a reboot, force stop or system termination.
 
-Alternatively, copy the APK to the phone's Download folder using USB file transfer, then open it in My Files and install/update it. USB debugging is not required for this method. Version 0.5 can be installed over earlier versions using the same debug signing key. Confirm the screen says **Version 0.5** and has no key field.
+Alternatively, copy the APK to the phone's Download folder using USB file transfer, then open it in My Files and install/update it. USB debugging is not required for this method. Version 0.6 can be installed over earlier versions using the same debug signing key. Confirm the screen says **Version 0.6** and has no key field.
 
 Install an English speech-recognition language and TTS voice if needed. On-device command recognition is preferred when available; otherwise Android's speech provider may process commands online. TTS can also use network voices. No audio or transcript history is saved to disk; the last exchange stays in memory. The app itself has no internet permission, and no credentials are needed or stored in version 0.2.
 
@@ -52,7 +63,7 @@ Install an English speech-recognition language and TTS voice if needed. On-devic
 - A notification is shown while listening. A partial CPU wake lock supports screen-off listening, with a real battery cost that must be measured on the phone.
 - Engine initialization uses a worker thread. Speech APIs and state changes use the main thread. Recognition and reply timeouts prevent indefinite sessions.
 - No rolling buffer yet: wait for the beep before speaking. Seamless wake phrase plus command requires a shared audio pipeline.
-- No auto-start at boot, default-assistant role, cloud AI, voice interruption or speaker identification yet. Timer requests are the first supported phone action. Anyone can trigger the wake word.
+- No auto-start at boot, default-assistant role, cloud AI, voice interruption or speaker identification yet. Timer requests, app launching and torch control are supported phone actions. Anyone can trigger the wake word.
 - The bundled English keyword model uses a tokenized **Jarvis** keyword file. Custom phrases require generating matching tokens and retesting detection accuracy.
 - This APK includes ARM64 native libraries, matching the S25 Ultra. It does not support x86 emulators.
 - Manufacturer-level battery efficiency and Samsung background survival are not guaranteed.

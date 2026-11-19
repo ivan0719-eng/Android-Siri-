@@ -18,6 +18,8 @@ class MainActivity : Activity() {
     private lateinit var sensitivity: Switch
     private lateinit var timerButton: Button
     private lateinit var timerStatus: TextView
+    private lateinit var launchButton: Button
+    private lateinit var launchStatus: TextView
     private val handler = Handler(Looper.getMainLooper())
     private var refreshing = false
     private val refresh = object : Runnable {
@@ -25,6 +27,8 @@ class MainActivity : Activity() {
             status.text = AssistantService.status + if (AssistantService.diagnostics.isBlank()) "" else "\n\nDiagnostics:\n${AssistantService.diagnostics}"
             timerButton.isEnabled = TimerRequests.pending(this@MainActivity) != null
             timerStatus.text = TimerRequests.status(this@MainActivity)
+            launchButton.isEnabled = LaunchRequests.pending(this@MainActivity) != null
+            launchStatus.text = LaunchRequests.status(this@MainActivity)
             refreshing = true
             toggle.isChecked = AssistantService.running
             sensitivity.isEnabled = !AssistantService.running
@@ -48,7 +52,7 @@ class MainActivity : Activity() {
         }
         label("Pocket Assistant", 30f)
         label("Say Jarvis. Wait for the beep. Then ask a question.")
-        label("Version 0.5 · Time, date and timers", 15f)
+        label("Version 0.6 · Timers, apps and torch", 15f)
         label("No account or API key needed. Wake detection runs on your phone. Command recognition and voices may use your speech provider's network services.", 14f)
         sensitivity = Switch(this).apply {
             text = "More sensitive Jarvis detection"
@@ -78,6 +82,21 @@ class MainActivity : Activity() {
             }
         }
         layout.addView(timerButton)
+        launchStatus = label("", 16f)
+        launchButton = Button(this).apply {
+            text = "Open requested app"
+            setOnClickListener { LaunchRequests.pending(this@MainActivity)?.let { startActivity(LaunchRequests.launchIntent(this@MainActivity, it)) } }
+        }
+        layout.addView(launchButton)
+        layout.addView(Button(this).apply {
+            text = "Enable torch permission"
+            setOnClickListener {
+                if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+                    Toast.makeText(this@MainActivity, "Torch permission is already enabled.", Toast.LENGTH_SHORT).show()
+                else requestPermissions(arrayOf(Manifest.permission.CAMERA), 2)
+            }
+        })
+        label("Try: “Open Spotify”, “Open Instagram”, “Open torch”, “Turn off the torch”, or “Cancel the timer”. Camera permission is used only to control the light; the app does not capture photos or video. Running Clock timers must be stopped in Clock.", 16f)
         label("Try: “Set a timer for five minutes” or “Set a timer for one minute and thirty seconds”. When this app is in the background, tap the timer notification to send the request to Clock. Check Clock to confirm it is running.", 16f)
         label("Try: “What time is it?”, “What day is it?”, “Hello”.\n\nTurn listening off here or use Stop in the notification. After restarting the phone, open this app to enable listening again.", 16f)
         val scroll = ScrollView(this).apply { addView(layout) }
@@ -105,6 +124,12 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(code, permissions, results)
+        if (code == 2) {
+            Toast.makeText(this, if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+                "Torch enabled. Say Jarvis, then open torch."
+            else "Torch needs camera permission. You can allow it in the app's settings; other commands still work.", Toast.LENGTH_LONG).show()
+            return
+        }
         if (code != 1) return
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startListening()
         else {

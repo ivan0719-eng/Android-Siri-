@@ -183,7 +183,7 @@ class AssistantService : Service() {
                     else {
                         preferDefault = !usingOnDevice
                         getSharedPreferences("assistant", MODE_PRIVATE).edit().putBoolean("preferDefault", preferDefault).apply()
-                        val reply = when (val timer = TimerCommand.parse(text)) {
+                        val reply = DeviceActions.execute(this@AssistantService, DeviceCommand.parse(text)) ?: when (val timer = TimerCommand.parse(text)) {
                             is TimerCommand.Result.Valid -> TimerRequests.prepare(this@AssistantService, timer.seconds)
                             is TimerCommand.Result.Invalid -> timer.message
                             TimerCommand.Result.NotTimer -> Commands.reply(text)

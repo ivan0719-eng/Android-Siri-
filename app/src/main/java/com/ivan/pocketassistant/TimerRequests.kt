@@ -59,4 +59,11 @@ object TimerRequests {
         context.getSystemService(NotificationManager::class.java).cancel(20)
         return request
     }
+
+    fun cancelPending(context: Context): Boolean {
+        val request = pending(context) ?: return false
+        if (consume(context, request.id) == null) return false
+        setStatus(context, "Pending timer request cancelled. Timers already in Clock are unchanged.")
+        return true
+    }
 }
